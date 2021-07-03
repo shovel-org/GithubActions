@@ -85,7 +85,7 @@ function Expand-Property {
         [String] $Property
     )
 
-    return $Object | Select-Object -ExpandProperty $Property
+    process { return $Object | Select-Object -ExpandProperty $Property }
 }
 
 function Initialize-NeededConfiguration {
@@ -202,8 +202,7 @@ function New-CheckList {
         }
     }
 
-    $Status.Keys | ForEach-Object {
-        $name = $_
+    foreach ($name in $Status.Keys) {
         $item = $Status.Item($name)
         $ind = 0
         $parentState = $true
@@ -212,19 +211,19 @@ function New-CheckList {
             $result += _res $name $ind $item
         } else {
             $result += _res $name $ind $null
-            $item.Keys | ForEach-Object {
-                $nestedState = $item.Item($_)
+            foreach ($k in $item.Keys) {
+                $nestedState = $item.Item($k)
                 if ($nestedState -eq $false) { $parentState = $false }
-                $result += _res $_ ($ind + 1) $nestedState
+                $result += _res $k ($ind + 1) $nestedState
             }
             ($result | Where-Object { ($_.Item -eq $name) -and ($null -eq $_.State) }).State = $parentState
         }
     }
 
-    $result | ForEach-Object {
-        Write-Log $_.Item $_.State
-        if ($_.State -eq $false) { $env:NON_ZERO_EXIT = $true }
-        $final += New-CheckListItem -Item $_.Item -IndentLevel $_.Indent -OK:$_.State
+    foreach ($res in $result) {
+        Write-Log $res.Item $res.State
+        if ($res.State -eq $false) { $env:NON_ZERO_EXIT = $true }
+        $final += New-CheckListItem -Item $res.Item -IndentLevel $res.Indent -OK:$res.State
     }
 
     return $final

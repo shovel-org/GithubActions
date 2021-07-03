@@ -2,7 +2,7 @@ Join-Path $PSScriptRoot '..\Helpers.psm1' | Import-Module
 
 function Test-Hash {
     param (
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory)]
         [String] $Manifest,
         [Int] $IssueID
     )

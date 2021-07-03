@@ -20,25 +20,27 @@ function Invoke-GithubRequest {
         [Hashtable] $Body
     )
 
-    $baseUrl = 'https://api.github.com'
-    $parameters = @{
-        'Headers' = @{
-            # Authorization token is neeeded for posting comments and to increase limit of requests
-            'Authorization' = "token $env:GITHUB_TOKEN"
+    process {
+        $baseUrl = 'https://api.github.com'
+        $parameters = @{
+            'Headers' = @{
+                # Authorization token is neeeded for posting comments and to increase limit of requests
+                'Authorization' = "token $env:GITHUB_TOKEN"
+            }
+            'Method'  = $Method
+            'Uri'     = "$baseUrl/$Query"
         }
-        'Method'  = $Method
-        'Uri'     = "$baseUrl/$Query"
+
+        Write-Log 'Github Request' $parameters
+
+        if ($Body) { $parameters.Add('Body', (ConvertTo-Json $Body -Depth 8 -Compress)) }
+
+        Write-Log 'Request Body' $parameters.Body
+
+        $env:GH_REQUEST_COUNTER = ([int] $env:GH_REQUEST_COUNTER) + 1
+
+        return Invoke-WebRequest @parameters
     }
-
-    Write-Log 'Github Request' $parameters
-
-    if ($Body) { $parameters.Add('Body', (ConvertTo-Json $Body -Depth 8 -Compress)) }
-
-    Write-Log 'Request Body' $parameters.Body
-
-    $env:GH_REQUEST_COUNTER = ([int] $env:GH_REQUEST_COUNTER) + 1
-
-    return Invoke-WebRequest @parameters
 }
 
 function Add-Comment {
@@ -58,7 +60,9 @@ function Add-Comment {
         [String[]] $Message
     )
 
-    return Invoke-GithubRequest -Query "repos/$REPOSITORY/issues/$ID/comments" -Method Post -Body @{ 'body' = ($Message -join "`r`n") }
+    process {
+        return Invoke-GithubRequest -Query "repos/$REPOSITORY/issues/$ID/comments" -Method 'Post' -Body @{ 'body' = ($Message -join "`r`n") }
+    }
 }
 
 function Get-AllChangedFilesInPR {
@@ -77,10 +81,12 @@ function Get-AllChangedFilesInPR {
         [Switch] $Filter
     )
 
-    $files = (Invoke-GithubRequest -Query "repos/$REPOSITORY/pulls/$ID/files").Content | ConvertFrom-Json
-    if ($Filter) { $files = $files | Where-Object { $_.status -ne 'removed' } }
+    process {
+        $files = (Invoke-GithubRequest -Query "repos/$REPOSITORY/pulls/$ID/files").Content | ConvertFrom-Json
+        if ($Filter) { $files = $files | Where-Object { $_.status -ne 'removed' } }
 
-    return $files | Select-Object -Property filename, status
+        return $files | Select-Object -Property 'filename', 'status'
+    }
 }
 
 function New-Issue {
@@ -132,7 +138,9 @@ function Close-Issue {
     #>
     param([Parameter(Mandatory, ValueFromPipeline)][Int] $ID)
 
-    return Invoke-GithubRequest -Query "repos/$REPOSITORY/issues/$ID" -Method Patch -Body @{ 'state' = 'closed' }
+    process {
+        return Invoke-GithubRequest -Query "repos/$REPOSITORY/issues/$ID" -Method 'Patch' -Body @{ 'state' = 'closed' }
+    }
 }
 
 function Add-Label {
@@ -153,7 +161,9 @@ function Add-Label {
         [String[]] $Label
     )
 
-    return Invoke-GithubRequest -Query "repos/$REPOSITORY/issues/$ID/labels" -Method Post -Body @{ 'labels' = $Label }
+    process {
+        return Invoke-GithubRequest -Query "repos/$REPOSITORY/issues/$ID/labels" -Method 'Post' -Body @{ 'labels' = $Label }
+    }
 }
 
 function Remove-Label {
@@ -173,18 +183,20 @@ function Remove-Label {
         [String[]] $Label
     )
 
-    $responses = New-Array
-    # Get all labels on specific issue
-    $issueLabels = (Invoke-GithubRequest -Query "repos/$REPOSITORY/issues/$ID/labels" | Select-Object -ExpandProperty Content | ConvertFrom-Json).name
+    process {
+        $responses = New-Array
+        # Get all labels on specific issue
+        $issueLabels = (Invoke-GithubRequest -Query "repos/$REPOSITORY/issues/$ID/labels" | Select-Object -ExpandProperty 'Content' | ConvertFrom-Json).name
 
-    foreach ($lab in $Label) {
-        if ($issueLabels -contains $lab) {
-            # https://developer.github.com/v3/issues/labels/#list-labels-on-an-issue
-            Add-IntoArray $responses (Invoke-GithubRequest -Query "repos/$REPOSITORY/issues/$ID/labels/$label" -Method Delete)
+        foreach ($lab in $Label) {
+            if ($issueLabels -contains $lab) {
+                # https://developer.github.com/v3/issues/labels/#list-labels-on-an-issue
+                Add-IntoArray $responses (Invoke-GithubRequest -Query "repos/$REPOSITORY/issues/$ID/labels/$label" -Method 'Delete')
+            }
         }
-    }
 
-    return $responses
+        return $responses
+    }
 }
 
 Export-ModuleMember -Function Invoke-GithubRequest, Add-Comment, Get-AllChangedFilesInPR, New-Issue, Close-Issue, `
