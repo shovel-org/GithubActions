@@ -94,22 +94,22 @@ function Initialize-NeededConfiguration {
         Initialize all settings, environment, configurations to work as expected.
     #>
 
-    scoop update
-    scoop --version
+    shovel update
+    shovel --version
     git --version
 
-    @('cache', 'buckets', 'modules', 'persist', 'shims', 'workspace') | ForEach-Object { New-Item (Join-Path $env:SCOOP $_) -Force -ItemType Directory | Out-Null }
+    @('cache', 'buckets', 'modules', 'persist', 'shims', 'workspace') | ForEach-Object { New-Item (Join-Path $env:SCOOP $_) -Force -ItemType 'Directory' | Out-Null }
 
     $user = ($env:GITHUB_REPOSITORY -split '/')[0]
     $email = if ($env:GITH_EMAIL) { $env:GITH_EMAIL } else { $DEFAULT_EMAIL }
     $rem = "https://${env:GITHUB_ACTOR}:$env:GITHUB_TOKEN@github.com/$env:GITHUB_REPOSITORY.git"
 
-    git config --global user.name $user
-    git config --global user.email $email
-    git remote 'set-url' --push origin $rem
+    git config --global 'user.name' $user
+    git config --global 'user.email' $email
+    git remote 'set-url' --push 'origin' $rem
 
-    scoop config '7ZIPEXTRACT_USE_EXTERNAL' $true
-    scoop install 'hub' -g
+    shovel config '7ZIPEXTRACT_USE_EXTERNAL' $true
+    shovel install 'hub' -g
     if (-not $env:HUB_VERBOSE) {
         $env:HUB_VERBOSE = '1'
         [System.Environment]::SetEnvironmentVariable('HUB_VERBOSE', $env:HUB_VERBOSE, 'Machine')
@@ -129,7 +129,7 @@ function Get-Manifest {
     param([Parameter(Mandatory)][String] $Name)
 
     # It should alwyas be one item. Just in case use -First
-    $gciItem = Get-Childitem $MANIFESTS_LOCATION "$Name.*" | Select-Object -First 1
+    $gciItem = Get-ChildItem $MANIFESTS_LOCATION "$Name.*" | Select-Object -First 1
     $manifest = Get-Content $gciItem.Fullname -Raw | ConvertFrom-Json
 
     return $gciItem, $manifest
@@ -217,7 +217,7 @@ function New-CheckList {
                 if ($nestedState -eq $false) { $parentState = $false }
                 $result += _res $_ ($ind + 1) $nestedState
             }
-            ($result | Where-object { ($_.Item -eq $name) -and ($null -eq $_.State) }).State = $parentState
+            ($result | Where-Object { ($_.Item -eq $name) -and ($null -eq $_.State) }).State = $parentState
         }
     }
 

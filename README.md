@@ -1,8 +1,6 @@
-# Github actions for scoop buckets
+# Github actions for [Shovel](https://github.com/Ash258/Scoop-Core) buckets
 
-Set of automated actions, which will bucket maintainer ever need to save time managing issues/pull requets. Using `stable` tag instead of specific version is highly recommended.
-
-Use [`SHOVEL`](https://github.com/Ash258/Scoop-Core) environment variable for more advanced and optimized scoop implementation.
+Set of automated actions, which will save time when maintaining bucket, managing issues/pull requets. Using `main` tag instead of specific version is highly recommended.
 
 ## Available environment variables
 
@@ -11,14 +9,9 @@ Use [`SHOVEL`](https://github.com/Ash258/Scoop-Core) environment variable for mo
     - Use `${{ secrets.GITHUB_TOKEN }}`
 1. `GITH_EMAIL`**
     - String
-    - If specified, [`SHOVEL`](https://github.com/Ash258/Scoop-Core) implementation will be used
-1. `SHOVEL`
-    - Anything. Use `1`
-    - If specified, [`SHOVEL`](https://github.com/Ash258/Scoop-Core) implementation will be used
-    - It will be required in future versions to support installation/uninstallation PR checks
 1. `SCOOP_BRANCH`
     - String
-    - If specified, scoop config 'SCOOP_BRANCH' will be configured and scoop updated
+    - If specified, `shovel config 'SCOOP_BRANCH' $env:SCOOP_BRANCH` will be configured and shovel updated
 1. `SKIP_UPDATED`
     - Anything. Use `1`
     - If specified, log of checkver utility will not print latest versions
@@ -41,7 +34,7 @@ If email is not specified, commits will not be pushed using account bounded to t
 
 ### Issues
 
-As soon as new issue **is created** or **label `verify` is added** into issue, action is executed.
+As soon as new issue **is created** or **label `verify` is added** to the issue, action is executed.
 Based on issue title, specific sub-action is executed.
 It could be one of these:
 
@@ -53,15 +46,15 @@ It could be one of these:
                 1. There is PR already
                     1. The newest one is selected
                     1. Description of this PR is updated with closing directive for created issue
-                    1. Comment to issue is posted with reference to PR
+                    1. Comment to the issue is posted with reference to PR
                     1. Label `duplicate` added
                 1. If none
                     1. New branch `<manifest>-hash-fix-<random>` is created
                     1. Changes are commited
                     1. New PR is created from this branch
-            1. Labels `hash-fix-needed`, `verified` are added
+            1. Labels `hash-fix-needed`, `verified` are added to the issue
         1. No problem
-            1. Comment on issue is posted about hashes being right and possible causes
+            1. Comment on issue is posted about hashes being right with list of possible causes
             1. Label `hash-fix-needed` is removed
             1. Issue is closed
         1. Binary error
@@ -78,7 +71,7 @@ It could be one of these:
 
 ### Pull Requests
 
-As soon as PR **is created** or **comment `/verify` posted** to it, validation tests are executed (see [wiki](https://github.com/Ash258/Scoop-GithubActions/wiki/Pull-Request-Checks) for detailed desciption):
+As soon as PR **is created** or **comment `/verify` posted** to it, validation tests are executed (see [wiki](https://github.com/shovel-org/GithubActions/wiki/Pull-Request-Checks) for detailed desciption):
 
 - ❗❗ [Pull request created from forked repository cannot be verified due to security concern from GitHub side](https://github.com/Ash258/Scoop-GithubActions/issues/42) ❗❗
     - Manual `/verify` comment is needed (<https://github.com/Ash258/GithubActionsBucketForTesting/pull/176>)
@@ -102,7 +95,7 @@ As soon as PR **is created** or **comment `/verify` posted** to it, validation t
 #.github\workflows\schedule.yml
 on:
   schedule:
-  - cron: '*/30 * * * *'
+  - cron: '*/0 * * * *'
 name: Excavator
 jobs:
   excavate:
@@ -111,7 +104,7 @@ jobs:
     steps:
     - uses: actions/checkout@main
     - name: Excavator
-      uses: Ash258/Scoop-GithubActions@stable-win
+      uses: shovel-org/GithubActions@main
       env:
         GITH_EMAIL: youremail@mail.com
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -129,7 +122,7 @@ jobs:
     steps:
     - uses: actions/checkout@main
     - name: Issue Handler
-      uses: Ash258/Scoop-GithubActions@stable-win
+      uses: shovel-org/GithubActions@main
       if: github.event.action == 'opened' || (github.event.action == 'labeled' && contains(github.event.issue.labels.*.name, 'verify'))
       env:
         GITH_EMAIL: youremail@mail.com # Not needed, but recommended
@@ -147,7 +140,7 @@ jobs:
     steps:
     - uses: actions/checkout@main
     - name: Pull Request Validator
-      uses: Ash258/Scoop-GithubActions@stable-win
+      uses: shovel-org/GithubActions@main
       if: startsWith(github.event.comment.body, '/verify')
       env:
         GITH_EMAIL: youremail@mail.com # Not needed, but recommended
@@ -165,7 +158,7 @@ jobs:
     steps:
     - uses: actions/checkout@main
     - name: Pull Request Validator
-      uses: Ash258/Scoop-GithubActions@stable-win
+      uses: shovel-org/GithubActions@main
       env:
         GITH_EMAIL: youremail@mail.com # Not needed, but recommended
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

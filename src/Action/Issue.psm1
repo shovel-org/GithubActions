@@ -20,7 +20,7 @@ function Test-Hash {
             'Cannot reproduce'
             ''
             'Are you sure your scoop is up to date? Clean cache and reinstall'
-            "Please run ``scoop update; scoop cache rm $manifestNameAsInBucket;`` and update/reinstall application"
+            "Please run ``shovel update; shovel cache rm $manifestNameAsInBucket;`` and update/reinstall application"
             ''
             'Hash mismatch could be caused by these factors:'
             ''
