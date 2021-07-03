@@ -10,10 +10,11 @@ function Test-Hash {
     $gci, $man = Get-Manifest $Manifest
     $manifestNameAsInBucket = $gci.BaseName
 
-    $outputH = @(& (Join-Path $BINARIES_FOLDER 'checkhashes.ps1') -App $gci.Basename -Dir $MANIFESTS_LOCATION -Force *>&1)
+    $outputH = @(shovel utils 'checkhashes' $gci.FullName --additional-options -Force *>&1)
+    $ex = $LASTEXITCODE
     Write-Log 'Output' $outputH
 
-    if (($outputH[-2] -like 'OK') -and ($outputH[-1] -like 'Writing*')) {
+    if (($ex -eq 0) -and ($outputH[-2] -like 'OK') -and ($outputH[-1] -like 'Writing*')) {
         Write-Log 'Cannot reproduce'
 
         Add-Comment -ID $IssueID -Message @(
@@ -77,7 +78,7 @@ function Test-Hash {
 
             git add $gci.FullName
             git commit -m $titleToBePosted
-            git push origin $branch
+            git push 'origin' $branch
 
             # Create new PR
             Invoke-GithubRequest -Query "repos/$REPOSITORY/pulls" -Method Post -Body @{
@@ -101,7 +102,7 @@ function Test-Downloading {
     # dl_with_cache_aria2 $Manifest 'DL' $object (default_architecture) "/" $object.cookies $true
 
     # exit 0
-    foreach ($arch in @('64bit', '32bit')) {
+    foreach ($arch in @('64bit', '32bit', 'arm64')) {
         $urls = @(url $object $arch)
 
         foreach ($url in $urls) {
