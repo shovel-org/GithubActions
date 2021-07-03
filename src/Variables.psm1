@@ -13,9 +13,9 @@ $env:GH_REQUEST_COUNTER = 0
 $NON_ZERO = 258
 
 # Convert actual API response to object
-$EVENT = Get-Content $env:GITHUB_EVENT_PATH -Raw | ConvertFrom-Json
+$GH_EVENT = Get-Content $env:GITHUB_EVENT_PATH -Raw | ConvertFrom-Json
 # Compressed Event
-$EVENT_RAW = ConvertTo-Json $EVENT -Depth 100 -Compress
+$EVENT_RAW = ConvertTo-Json $GH_EVENT -Depth 100 -Compress
 # Event type for automatic handler detection
 $EVENT_TYPE = $env:GITHUB_EVENT_NAME
 

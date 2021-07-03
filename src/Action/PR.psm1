@@ -10,22 +10,22 @@ function Start-PR {
     #>
     $commented = $false
 
-    switch ($EVENT.action) {
+    switch ($GH_EVENT.action) {
         'opened' {
             Write-Log 'Opened PR'
         }
         'created' {
             Write-Log 'Commented PR'
 
-            if ($EVENT.comment.body -like '/verify*') {
+            if ($GH_EVENT.comment.body -like '/verify*') {
                 Write-Log 'Verify comment'
 
-                if ($EVENT.issue.pull_request) {
+                if ($GH_EVENT.issue.pull_request) {
                     Write-Log 'Pull request comment'
 
                     $commented = $true
                     # There is need to get actual pull request event
-                    $content = Invoke-GithubRequest "repos/$REPOSITORY/pulls/$($EVENT.issue.number)" | Select-Object -ExpandProperty Content
+                    $content = Invoke-GithubRequest "repos/$REPOSITORY/pulls/$($GH_EVENT.issue.number)" | Select-Object -ExpandProperty 'Content'
                     $script:EVENT_new = ConvertFrom-Json $content
                 } else {
                     Write-Log 'Issue comment'
@@ -75,7 +75,7 @@ function New-FinalMessage {
         [String[]] $Invalid
     )
 
-    $prID = $EVENT.number
+    $prID = $GH_EVENT.number
     $message = New-Array
 
     foreach ($ch in $Check) {
@@ -143,6 +143,7 @@ function Test-PRFile {
         # For Some reason -ErrorAction is not honored for convertfrom-json
         $old_e = $ErrorActionPreference
         $ErrorActionPreference = 'SilentlyContinue'
+        # TODO: Yaml
         $object = Get-Content $manifest.Fullname -Raw | ConvertFrom-Json
         $ErrorActionPreference = $old_e
 
@@ -282,15 +283,15 @@ function Initialize-PR {
     if ($null -eq $commented) { return } # Exit on not supported state
     Write-Log 'Commented?' $commented
 
-    $EVENT | ConvertTo-Json -Depth 8 -Compress | Write-Log 'Pure PR Event'
+    $GH_EVENT | ConvertTo-Json -Depth 8 -Compress | Write-Log 'Pure PR Event'
     if ($EVENT_new) {
         Write-Log 'There is new event available'
-        $EVENT = $EVENT_new
-        $EVENT | ConvertTo-Json -Depth 8 -Compress | Write-Log 'New Event'
+        $GH_EVENT = $EVENT_new
+        $GH_EVENT | ConvertTo-Json -Depth 8 -Compress | Write-Log 'New Event'
     }
 
     # TODO: Ternary
-    $head = if ($commented) { $EVENT.head } else { $EVENT.pull_request.head }
+    $head = if ($commented) { $GH_EVENT.head } else { $GH_EVENT.pull_request.head }
 
     if ($head.repo.fork) {
         Write-Log 'Forked repository'
@@ -326,7 +327,7 @@ function Initialize-PR {
     (Get-ChildItem $MANIFESTS_LOCATION | Select-Object -ExpandProperty Basename) -join ', ' | Write-log 'Manifests'
 
     # Do not run checks on removed files
-    $files = Get-AllChangedFilesInPR $EVENT.number -Filter
+    $files = Get-AllChangedFilesInPR $GH_EVENT.number -Filter
     Write-Log 'PR Changed Files' $files
 
     # Stage 2 - Manifests validation

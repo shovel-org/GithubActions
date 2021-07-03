@@ -147,17 +147,17 @@ function Test-Downloading {
 function Initialize-Issue {
     Write-Log 'Issue initialized'
 
-    if (-not (($EVENT.action -eq 'opened') -or ($EVENT.action -eq 'labeled'))) {
+    if (-not (($GH_EVENT.action -eq 'opened') -or ($GH_EVENT.action -eq 'labeled'))) {
         Write-Log "Only actions 'opened' and 'labeled' are supported"
         return
     }
 
-    $title = $EVENT.issue.title
-    $id = $EVENT.issue.number
-    $label = $EVENT.issue.labels.name
+    $title = $GH_EVENT.issue.title
+    $id = $GH_EVENT.issue.number
+    $label = $GH_EVENT.issue.labels.name
 
     # Only labeled action with verify label should continue
-    if (($EVENT.action -eq 'labeled') -and ($label -notcontains 'verify')) {
+    if (($GH_EVENT.action -eq 'labeled') -and ($label -notcontains 'verify')) {
         Write-Log 'Labeled action contains wrong label'
         return
     }
