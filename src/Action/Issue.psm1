@@ -8,6 +8,7 @@ function Test-Hash {
     )
 
     $gci, $man = Get-Manifest $Manifest
+    $manifestNameAsInBucket = $gci.BaseName
 
     $outputH = @(& (Join-Path $BINARIES_FOLDER 'checkhashes.ps1') -App $gci.Basename -Dir $MANIFESTS_LOCATION -Force *>&1)
     Write-Log 'Output' $outputH
@@ -19,7 +20,7 @@ function Test-Hash {
             'Cannot reproduce'
             ''
             'Are you sure your scoop is up to date? Clean cache and reinstall'
-            "Please run ``scoop update; scoop cache rm $Manifest;`` and update/reinstall application"
+            "Please run ``scoop update; scoop cache rm $manifestNameAsInBucket;`` and update/reinstall application"
             ''
             'Hash mismatch could be caused by these factors:'
             ''
@@ -37,11 +38,13 @@ function Test-Hash {
     } else {
         Write-Log 'Verified hash failed'
 
+        $masterBranch = (Invoke-GithubRequest "repos/$REPOSITORY").Content | ConvertFrom-Json
+        $masterBranch = $masterBranch.default_branch
         $message = @('You are right. Thank you for reporting.')
         # TODO: Post labels at the end of function
         Add-Label -ID $IssueID -Label 'verified', 'hash-fix-needed'
-        $prs = (Invoke-GithubRequest "repos/$REPOSITORY/pulls?state=open&base=master&sorting=updated").Content | ConvertFrom-Json
-        $titleToBePosted = "$Manifest@$($man.version): Fix hash"
+        $prs = (Invoke-GithubRequest "repos/$REPOSITORY/pulls?state=open&base=$masterBranch&sorting=updated").Content | ConvertFrom-Json
+        $titleToBePosted = "$manifestNameAsInBucket@$($man.version): Fix hash"
         $prs = $prs | Where-Object { $_.title -eq $titleToBePosted }
 
         # There is alreay PR for
@@ -63,7 +66,7 @@ function Test-Hash {
         } else {
             Write-Log 'PR - Create new branch and post PR'
 
-            $branch = "$Manifest-hash-fix-$(Get-Random -Maximum 258258258)"
+            $branch = "$manifestNameAsInBucket-hash-fix-$(Get-Random -Maximum 258258258)"
 
             Write-Log 'Branch' $branch
 
@@ -79,7 +82,7 @@ function Test-Hash {
             # Create new PR
             Invoke-GithubRequest -Query "repos/$REPOSITORY/pulls" -Method Post -Body @{
                 'title' = $titleToBePosted
-                'base'  = 'master'
+                'base'  = $masterBranch
                 'head'  = $branch
                 'body'  = "- Closes #$IssueID"
             }
@@ -136,7 +139,7 @@ function Test-Downloading {
         Write-Log 'Broken URLS' $broken_urls
 
         $string = ($broken_urls | Select-Object -Unique | ForEach-Object { "- $_" }) -join "`r`n"
-        Add-Label -ID $IssueID -Label 'manifest-fix-needed', 'verified', 'help-wanted'
+        Add-Label -ID $IssueID -Label 'manifest-fix-needed', 'verified', 'help wanted'
         Add-Comment -ID $IssueID -Comment 'Thank you for reporting. You are right.', '', 'Following URLs are not accessible:', '', $string
     }
 }
@@ -168,7 +171,16 @@ function Initialize-Issue {
         return
     }
 
-    $null, $manifest_loaded = Get-Manifest $problematicName
+    try {
+        $null, $manifest_loaded = Get-Manifest $problematicName
+    } catch {
+        Add-Comment -ID $id -Message "The specified manifest ``$problematicName`` does not exist in this bucket. Make sure you opened the issue in the correct bucket."
+        Add-Label -Id $id -Label 'invalid'
+        Remove-Label -Id $id -Label 'verify'
+        Close-Issue -ID $id
+        return
+    }
+
     if ($manifest_loaded.version -ne $problematicVersion) {
         Add-Comment -ID $id -Message @(
             # TODO: Try to find specific version of arhived manifest
@@ -177,6 +189,7 @@ function Initialize-Issue {
             "Run ``scoop update; scoop update $problematicName --force``"
         )
         Close-Issue -ID $id
+        Remove-Label -Id $id -Label 'verify'
         return
     }
 

@@ -11,8 +11,14 @@ function Install-Scoop {
     Invoke-WebRequest 'https://raw.githubusercontent.com/ScoopInstaller/Install/master/install.ps1' -UseBasicParsing -OutFile $f
     & $f -RunAsAdmin
     if ($env:SHOVEL) {
-        Write-Log 'Switch to Shovel'
-        scoop config SCOOP_REPO 'https://github.com/Ash258/Scoop-Core.git'
+        Write-Log 'Switching to Shovel'
+        scoop config 'SCOOP_REPO' 'https://github.com/Ash258/Scoop-Core.git'
+        scoop update
+    }
+
+    if ($env:SCOOP_BRANCH) {
+        Write-Log "Switching to branch: ${env:SCOOP_BRANCH}"
+        scoop config 'SCOOP_BRANCH' $env:SCOOP_BRANCH
         scoop update
     }
 
