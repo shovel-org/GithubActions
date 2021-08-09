@@ -9,7 +9,6 @@ function Initialize-Scheduled {
 
     $params = @{
         'Dir'         = $MANIFESTS_LOCATION
-        'Upstream'    = "${REPOSITORY}:master"
         'Push'        = $true
         'SkipUpdated' = [bool] $env:SKIP_UPDATED
     }

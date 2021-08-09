@@ -1,4 +1,4 @@
-name: Bucket Minion
+name: Shovel Bucket Minion
 description: Set of actions to automate Shovel bucket maintaining.
 author: Jakub <Ash258> Čábera
 # TODO: Wait for proper powershell support
