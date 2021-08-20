@@ -172,11 +172,12 @@ function Test-PRFile {
         #region 2. Hashes
         if ($object.version -ne 'nightly') {
             Write-Log 'Hashes'
-            $outputH = @(& (Join-Path $BINARIES_FOLDER 'checkhashes.ps1') -App $manifest.Basename -Dir $MANIFESTS_LOCATION *>&1)
+            $outputH = @(& shovel utils checkhashes $manifest.FullName *>&1)
+            $ec = $LASTEXITCODE
             Write-Log 'Output' $outputH
 
             # Everything should be all right when latest string in array will be OK
-            $statuses.Add('Hashes', ($outputH[-1] -like 'OK'))
+            $statuses.Add('Hashes', (($ec -eq 0) -and ($outputH[-1] -like 'OK')))
 
             Write-Log 'Hashes done'
         }
@@ -185,11 +186,12 @@ function Test-PRFile {
         #region 3. Checkver and 4. Autoupdate
         if ($object.checkver) {
             Write-Log 'Checkver'
-            $outputV = @(& (Join-Path $BINARIES_FOLDER 'checkver.ps1') -App $manifest.Basename -Dir $MANIFESTS_LOCATION -Force *>&1)
+            $outputV = @(& shovel utils checkver $manifest.FullName --additional-options -Force *>&1)
+            $ec = $LASTEXITCODE
             Write-log 'Output' $outputV
 
             # If there are more than 2 lines and second line is not version, there is problem
-            $checkver = ((($outputV.Count -ge 2) -and ($outputV[1] -like "$($object.version)")))
+            $checkver = (($ec -eq 0) -and (($outputV.Count -ge 2) -and ($outputV[1] -like "$($object.version)")))
             $statuses.Add('Checkver', $checkver)
             Write-Log 'Checkver done'
 
@@ -201,7 +203,7 @@ function Test-PRFile {
                     'ERROR*' {
                         Write-Log 'Error in checkver'
                     }
-                    "couldn't match*" {
+                    'could*t match*' {
                         Write-Log 'Version match fail'
                     }
                     'Writing updated*' {
@@ -213,7 +215,7 @@ function Test-PRFile {
                 $statuses.Add('Autoupdate', $autoupdate)
 
                 # There is some hash property defined in autoupdate
-                if ((hash $object.autoupdate '32bit') -or (hash $object.autoupdate '64bit')) {
+                if ((($outputV -like 'Searching hash for*')) -or (hash $object.autoupdate '32bit') -or (hash $object.autoupdate '64bit') -or (hash $object.autoupdate 'arm64')) {
                     $result = $autoupdate
                     if ($result) {
                         # If any result contains any item with 'Could not find hash*' there is hash extraction error.
@@ -306,7 +308,7 @@ function Initialize-PR {
         $REPOSITORY_forked = "$($head.repo.full_name):$($head.ref)"
         Write-Log 'Repo' $REPOSITORY_forked
 
-        $cloneLocation = '/github/forked_workspace'
+        $cloneLocation = "${env:TMP}\forked_repository"
         git clone --branch $head.ref $head.repo.clone_url $cloneLocation
         $script:BUCKET_ROOT = $cloneLocation
         $buck = Join-Path $BUCKET_ROOT 'bucket'
@@ -329,6 +331,8 @@ function Initialize-PR {
     # Do not run checks on removed files
     $files = Get-AllChangedFilesInPR $GH_EVENT.number -Filter
     Write-Log 'PR Changed Files' $files
+    $files = $files | Where-Object -Property 'filename' -Like -Value 'bucket/*'
+    Write-Log 'Only Changed Manifests' $files
 
     # Stage 2 - Manifests validation
     $check, $invalid = Test-PRFile $files
