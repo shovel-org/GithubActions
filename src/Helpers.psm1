@@ -130,7 +130,8 @@ function Get-Manifest {
 
     # It should alwyas be one item. Just in case use -First
     $gciItem = Get-ChildItem $MANIFESTS_LOCATION "$Name.*" | Select-Object -First 1
-    $manifest = Get-Content $gciItem.Fullname -Raw | ConvertFrom-Json
+    # TODO: Consider better approach?
+    $manifest = shovel cat $gciItem.Fullname --format json | ConvertFrom-Json
 
     return $gciItem, $manifest
 }
@@ -254,7 +255,7 @@ function Test-NestedBucket {
             New-Issue -Title $adopt -Body @(
                 'Buckets without nested `bucket` folder are not supported. You will not be able to use actions without it.',
                 '',
-                'See <https://github.com/Ash258/GenericBucket> for the most optimal bucket structure.'
+                'See <https://github.com/shovel-org/GenericBucket> for the most optimal bucket structure.'
             )
         }
 

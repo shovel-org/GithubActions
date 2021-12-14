@@ -136,6 +136,8 @@ function Test-PRFile {
         $object = $null
         $statuses = [Ordered] @{ }
 
+        # TODO: Adopt verify utility
+
         # Convert path into gci item to hold all needed information
         $manifest = Get-ChildItem $BUCKET_ROOT $f.filename
         Write-Log 'Manifest' $manifest
@@ -144,7 +146,7 @@ function Test-PRFile {
         $old_e = $ErrorActionPreference
         $ErrorActionPreference = 'SilentlyContinue'
         # TODO: Yaml
-        $object = Get-Content $manifest.Fullname -Raw | ConvertFrom-Json
+        $object = shovel cat $manifest.FullName --format json | ConvertFrom-Json
         $ErrorActionPreference = $old_e
 
         if ($null -eq $object) {
@@ -155,6 +157,9 @@ function Test-PRFile {
 
             if ($manifest.Extension -eq '.json') {
                 Write-Log 'Invalid JSON'
+                $invalid += $manifest.Basename
+            } elseif ($manifest.Extension -in ('.yml', '.yaml')) {
+                Write-Log 'Invalid YML'
                 $invalid += $manifest.Basename
             } else {
                 Write-Log 'Not manifest at all'
