@@ -1,9 +1,9 @@
 Join-Path $PSScriptRoot 'Variables.psm1' | Import-Module
 
-function Write-Log {
+function Write-ActionLog {
     <#
     .SYNOPSIS
-        Persist message in docker log. For debug mainly. Write-Host is more suitable because then write-log is not interfering with pipes.
+        Persist message in docker log. For debug mainly. Write-Host is more suitable because then Write-ActionLog is not interfering with pipes.
     .PARAMETER Summary
         Header of log.
     .PARAMETER Message
@@ -12,23 +12,37 @@ function Write-Log {
     param(
         [String] $Summary = '',
         [Parameter(ValueFromPipeline)]
-        [Object[]] $Message
+        [Object[]] $Message,
+        [Switch] $Info,
+        [Switch] $Err,
+        [Switch] $Warning,
+        [Switch] $Success
     )
 
-    # If it is only summary it is informative log
-    if ($Summary -and ($null -eq $Message)) {
-        Write-Host "INFO: $Summary"
-    } elseif (($Message.Count -eq 1) -and ($Message[0] -isnot [Hashtable])) {
-        # Simple non hashtable object and summary should be one liner
-        Write-Host "${Summary}: $Message"
-    } else {
-        # Detailed output using format table
-        Write-Host "Log of ${Summary}:"
-        $mess = ($Message | Format-Table -HideTableHeaders -AutoSize | Out-String).Trim() -split "`r`n"
-        Write-Host ($mess | ForEach-Object { "`n    $_" })
-    }
+    process {
+        $color = 'White'
+        if ($Info) { $color = 'DarkGray' }
+        if ($Err) { $color = 'DarkRed' }
+        if ($Warning) { $color = 'DarkYellow' }
+        if ($Success) { $color = 'Green' }
 
-    Write-Host ''
+        $splat = @{ 'ForegroundColor' = $color }
+
+        # If it is only summary it is informative log
+        if ($Summary -and ($null -eq $Message)) {
+            Write-Host "INFO: $Summary" @splat
+        } elseif (($Message.Count -eq 1) -and ($Message[0] -isnot [Hashtable])) {
+            # Simple non hashtable object and summary should be one liner
+            Write-Host "${Summary}: $Message" @splat
+        } else {
+            # Detailed output using format table
+            Write-Host "Log of ${Summary}:" @splat
+            $mess = ($Message | Format-Table -HideTableHeaders -AutoSize | Out-String).Trim() -split "`r`n"
+            Write-Host ($mess | ForEach-Object { "`n    $_" }) @splat
+        }
+
+        Write-Host '' @splat
+    }
 }
 
 function Get-EnvironmentVariable {
@@ -116,7 +130,7 @@ function Initialize-NeededConfiguration {
     }
 
     # Log all environment variables
-    Write-Log 'Environment' (Get-EnvironmentVariable)
+    Write-ActionLog 'Environment' (Get-EnvironmentVariable)
 }
 
 function Get-Manifest {
@@ -132,6 +146,25 @@ function Get-Manifest {
     $gciItem = Get-ChildItem $MANIFESTS_LOCATION "$Name.*" | Select-Object -First 1
     # TODO: Consider better approach?
     $manifest = shovel cat $gciItem.Fullname --format json | ConvertFrom-Json
+
+    return $gciItem, $manifest
+}
+
+function Get-ManifestSpecificVersion {
+    <#
+    .SYNOPSIS
+        Parse manifest and return it's path and object representation.
+    .PARAMETER Name
+        Name of manifest to parse.
+    #>
+    param([Parameter(Mandatory)][String] $Name, $Version)
+
+    # It should alwyas be one item. Just in case use -First
+    $gciItem = Join-Path $MANIFESTS_LOCATION "old\$Name" | Get-ChildItem -Filter "$Version.*" -File | Select-Object -First 1
+    # TODO: Consider better approach?
+    $manifest = shovel cat $gciItem.Fullname --format json | ConvertFrom-Json
+
+    Write-ActionLog "Found '$($gciItem.Fullname)' for $Name ($Version)"
 
     return $gciItem, $manifest
 }
@@ -222,7 +255,7 @@ function New-CheckList {
     }
 
     foreach ($res in $result) {
-        Write-Log $res.Item $res.State
+        Write-ActionLog $res.Item $res.State
         if ($res.State -eq $false) { $env:NON_ZERO_EXIT = $true }
         $final += New-CheckListItem -Item $res.Item -IndentLevel $res.Indent -OK:$res.State
     }
@@ -239,9 +272,9 @@ function Test-NestedBucket {
     #>
 
     if (Test-Path $MANIFESTS_LOCATION) {
-        Write-Log 'Bucket contains nested bucket folder'
+        Write-ActionLog 'Bucket contains nested bucket folder'
     } else {
-        Write-Log 'Buckets without nested bucket folder are not supported.'
+        Write-ActionLog 'Buckets without nested bucket folder are not supported.'
 
         $adopt = 'Adopt nested bucket structure'
         # Get opened issues
@@ -250,7 +283,7 @@ function Test-NestedBucket {
         $issues = ConvertFrom-Json $req.Content | Where-Object { $_.title -eq $adopt }
 
         if ($issues -and ($issues.Count -gt 0)) {
-            Write-Log 'Issue already exists'
+            Write-ActionLog 'Issue already exists'
         } else {
             New-Issue -Title $adopt -Body @(
                 'Buckets without nested `bucket` folder are not supported. You will not be able to use actions without it.',
@@ -284,6 +317,6 @@ function Resolve-IssueTitle {
     }
 }
 
-Export-ModuleMember -Function Write-Log, Get-EnvironmentVariables, New-Array, Add-IntoArray, Initialize-NeededConfiguration, `
-    Expand-Property, Get-Manifest, New-DetailsCommentString, New-CheckListItem, Test-NestedBucket, Resolve-IssueTitle, `
-    New-CheckList
+Export-ModuleMember -Function Write-ActionLog, Get-EnvironmentVariables, New-Array, Add-IntoArray, Initialize-NeededConfiguration, `
+    Expand-Property, Get-Manifest, Get-ManifestSpecificVersion, New-DetailsCommentString, New-CheckListItem, Test-NestedBucket, `
+    Resolve-IssueTitle, New-CheckList

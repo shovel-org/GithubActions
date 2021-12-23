@@ -12,32 +12,32 @@ function Start-PR {
 
     switch ($GH_EVENT.action) {
         'opened' {
-            Write-Log 'Opened PR'
+            Write-ActionLog 'Opened PR'
         }
         'created' {
-            Write-Log 'Commented PR'
+            Write-ActionLog 'Commented PR'
 
             if ($GH_EVENT.comment.body -like '/verify*') {
-                Write-Log 'Verify comment'
+                Write-ActionLog 'Verify comment'
 
                 if ($GH_EVENT.issue.pull_request) {
-                    Write-Log 'Pull request comment'
+                    Write-ActionLog 'Pull request comment'
 
                     $commented = $true
                     # There is need to get actual pull request event
                     $content = Invoke-GithubRequest "repos/$REPOSITORY/pulls/$($GH_EVENT.issue.number)" | Select-Object -ExpandProperty 'Content'
                     $script:EVENT_new = ConvertFrom-Json $content
                 } else {
-                    Write-Log 'Issue comment'
+                    Write-ActionLog 'Issue comment'
                     $commented = $null # No need to do anything on issue comment
                 }
             } else {
-                Write-Log 'Not supported comment body'
+                Write-ActionLog 'Not supported comment body'
                 $commented = $null
             }
         }
         default {
-            Write-Log 'Only action ''opened'' is supported'
+            Write-ActionLog 'Only action ''opened'' is supported'
             $commented = $null
         }
     }
@@ -53,7 +53,7 @@ function Set-RepositoryContext {
     param ([Parameter(Mandatory)] $Ref)
 
     if ((git branch --show-current) -ne $Ref) {
-        Write-Log "Switching branch to $Ref"
+        Write-ActionLog "Switching branch to $Ref"
 
         git fetch --all
         git checkout $Ref
@@ -86,7 +86,7 @@ function New-FinalMessage {
     }
 
     if ($Invalid.Count -gt 0) {
-        Write-Log 'PR contains invalid manifests'
+        Write-ActionLog 'PR contains invalid manifests'
 
         $env:NON_ZERO_EXIT = $true
         Add-IntoArray $message '### Invalid manifests'
@@ -129,7 +129,7 @@ function Test-PRFile {
     $check = @()
     $invalid = @()
     foreach ($f in $File) {
-        Write-Log "Starting $($f.filename) checks"
+        Write-ActionLog "Starting $($f.filename) checks"
 
         # Reset variables from previous iteration
         $manifest = $null
@@ -140,7 +140,7 @@ function Test-PRFile {
 
         # Convert path into gci item to hold all needed information
         $manifest = Get-ChildItem $BUCKET_ROOT $f.filename
-        Write-Log 'Manifest' $manifest
+        Write-ActionLog 'Manifest' $manifest
 
         # For Some reason -ErrorAction is not honored for convertfrom-json
         $old_e = $ErrorActionPreference
@@ -150,21 +150,21 @@ function Test-PRFile {
         $ErrorActionPreference = $old_e
 
         if ($null -eq $object) {
-            Write-Log 'Conversion failed'
+            Write-ActionLog 'Conversion failed'
 
             # Handling of configuration files (vscode, ...) will not be problem as soon as nested bucket folder is restricted
-            Write-Log 'Extension' $manifest.Extension
+            Write-ActionLog 'Extension' $manifest.Extension
 
             if ($manifest.Extension -eq '.json') {
-                Write-Log 'Invalid JSON'
+                Write-ActionLog 'Invalid JSON'
                 $invalid += $manifest.Basename
             } elseif ($manifest.Extension -in ('.yml', '.yaml')) {
-                Write-Log 'Invalid YML'
+                Write-ActionLog 'Invalid YML'
                 $invalid += $manifest.Basename
             } else {
-                Write-Log 'Not manifest at all'
+                Write-ActionLog 'Not manifest at all'
             }
-            Write-Log "Skipped $($f.filename)"
+            Write-ActionLog "Skipped $($f.filename)"
             continue
         }
 
@@ -176,43 +176,43 @@ function Test-PRFile {
 
         #region 2. Hashes
         if ($object.version -ne 'nightly') {
-            Write-Log 'Hashes'
+            Write-ActionLog 'Hashes'
             $outputH = @(& shovel utils checkhashes $manifest.FullName *>&1)
             $ec = $LASTEXITCODE
-            Write-Log 'Output' $outputH
+            Write-ActionLog 'Output' $outputH
 
             # Everything should be all right when latest string in array will be OK
             $statuses.Add('Hashes', (($ec -eq 0) -and ($outputH[-1] -like 'OK')))
 
-            Write-Log 'Hashes done'
+            Write-ActionLog 'Hashes done'
         }
         #endregion 2. Hashes
 
         #region 3. Checkver and 4. Autoupdate
         if ($object.checkver) {
-            Write-Log 'Checkver'
+            Write-ActionLog 'Checkver'
             $outputV = @(& shovel utils checkver $manifest.FullName --additional-options -Force *>&1)
             $ec = $LASTEXITCODE
-            Write-log 'Output' $outputV
+            Write-ActionLog 'Output' $outputV
 
             # If there are more than 2 lines and second line is not version, there is problem
             $checkver = (($ec -eq 0) -and (($outputV.Count -ge 2) -and ($outputV[1] -like "$($object.version)")))
             $statuses.Add('Checkver', $checkver)
-            Write-Log 'Checkver done'
+            Write-ActionLog 'Checkver done'
 
             #region Autoupdate
             if ($object.autoupdate) {
-                Write-Log 'Autoupdate'
+                Write-ActionLog 'Autoupdate'
                 $autoupdate = $false
                 switch -Wildcard ($outputV[-1]) {
                     'ERROR*' {
-                        Write-Log 'Error in checkver'
+                        Write-ActionLog 'Error in checkver'
                     }
                     'could*t match*' {
-                        Write-Log 'Version match fail'
+                        Write-ActionLog 'Version match fail'
                     }
                     'Writing updated*' {
-                        Write-Log 'Autoupdate finished successfully'
+                        Write-ActionLog 'Autoupdate finished successfully'
                         $autoupdate = $true
                     }
                     default { $autoupdate = $checkver }
@@ -228,29 +228,29 @@ function Test-PRFile {
                     }
                     $statuses.Add('Autoupdate Hash Extraction', $result)
                 }
-                Write-Log 'Autoupdate done'
+                Write-ActionLog 'Autoupdate done'
             }
             #endregion Autoupdate
         }
         #endregion 3. Checkver and 4. Autoupdate
 
         #region 5. Manifest format
-        # Write-Log 'Format'
+        # Write-ActionLog 'Format'
         # TODO: implement format check using array compare if possible (or just strings with raws)
         # TODO: I am not sure if this will handle tabs and everything what could go wrong.
         #$raw = Get-Content $manifest.Fullname -Raw
         #$new_raw = $object | ConvertToPrettyJson
         #$statuses.Add('Format', ($raw -eq $new_raw))
-        # Write-Log 'Format done'
+        # Write-ActionLog 'Format done'
         #endregion 4. Manifest format
 
         #region 6. Installation
-        # Write-Log 'Installation'
+        # Write-ActionLog 'Installation'
         # # Try catch as currently some components are throwing exceptions
         # try {
         #     $outputI = @(scoop install $manifest.FullName *>&1)
         # } catch {
-        #     Write-Log 'Installation failed' # Mainly due to some manifest script problem
+        #     Write-ActionLog 'Installation failed' # Mainly due to some manifest script problem
         #     $installation = $false
         # }
 
@@ -258,17 +258,17 @@ function Test-PRFile {
         # }
 
         # $statuses.Add('Installation', $installation)
-        # Write-Log 'Installation done'
+        # Write-ActionLog 'Installation done'
         #endregion 6. Installation
 
         #region 7. Uninstallation
-        # Write-Log 'Uninstallation'
-        # Write-Log 'Uninstallation done'
+        # Write-ActionLog 'Uninstallation'
+        # Write-ActionLog 'Uninstallation done'
         #endregion 7. Uninstallation
 
         $check += [Ordered] @{ 'Name' = $manifest.Basename; 'Statuses' = $statuses }
 
-        Write-Log "Finished $($f.filename) checks"
+        Write-ActionLog "Finished $($f.filename) checks"
     }
 
     return $check, $invalid
@@ -283,35 +283,35 @@ function Initialize-PR {
         2. Validate all changed manifests
         3. Post comment with check results
     #>
-    Write-Log 'PR initialized'
+    Write-ActionLog 'PR initialized'
 
     #region Stage 1 - Repository initialization
     $commented = Start-PR
     if ($null -eq $commented) { return } # Exit on not supported state
-    Write-Log 'Commented?' $commented
+    Write-ActionLog 'Commented?' $commented
 
-    $GH_EVENT | ConvertTo-Json -Depth 8 -Compress | Write-Log 'Pure PR Event'
+    $GH_EVENT | ConvertTo-Json -Depth 8 -Compress | Write-ActionLog 'Pure PR Event'
     if ($EVENT_new) {
-        Write-Log 'There is new event available'
+        Write-ActionLog 'There is new event available'
         $GH_EVENT = $EVENT_new
-        $GH_EVENT | ConvertTo-Json -Depth 8 -Compress | Write-Log 'New Event'
+        $GH_EVENT | ConvertTo-Json -Depth 8 -Compress | Write-ActionLog 'New Event'
     }
 
     # TODO: Ternary
     $head = if ($commented) { $GH_EVENT.head } else { $GH_EVENT.pull_request.head }
 
     if ($head.repo.fork) {
-        Write-Log 'Forked repository'
+        Write-ActionLog 'Forked repository'
 
         # There is no need to run whole action under forked repository due to permission problem
         if ($commented -eq $false) {
-            Write-Log 'Cannot comment with read only token'
+            Write-ActionLog 'Cannot comment with read only token'
             # TODO: Execute it and adopt pester like checks
             return
         }
 
         $REPOSITORY_forked = "$($head.repo.full_name):$($head.ref)"
-        Write-Log 'Repo' $REPOSITORY_forked
+        Write-ActionLog 'Repo' $REPOSITORY_forked
 
         $cloneLocation = "${env:TMP}\forked_repository"
         git clone --branch $head.ref $head.repo.clone_url $cloneLocation
@@ -320,7 +320,7 @@ function Initialize-PR {
         # TODO: Ternary
         $script:MANIFESTS_LOCATION = if (Test-Path $buck) { $buck } else { $BUCKET_ROOT }
 
-        Write-Log "Switching to $REPOSITORY_forked"
+        Write-ActionLog "Switching to $REPOSITORY_forked"
         Push-Location $cloneLocation
     }
 
@@ -329,25 +329,25 @@ function Initialize-PR {
     #endregion Stage 1 - Repository initialization
 
     # In case of forked repository it needs to be '/github/forked_workspace'
-    Get-Location | Write-Log 'Context of action'
-    (Get-ChildItem $BUCKET_ROOT | Select-Object -ExpandProperty 'BaseName') -join ', ' | Write-log 'Root Files'
-    (Get-ChildItem $MANIFESTS_LOCATION | Select-Object -ExpandProperty 'BaseName') -join ', ' | Write-log 'Manifests'
+    Get-Location | Write-ActionLog 'Context of action'
+    (Get-ChildItem $BUCKET_ROOT | Select-Object -ExpandProperty 'BaseName') -join ', ' | Write-ActionLog 'Root Files'
+    (Get-ChildItem $MANIFESTS_LOCATION | Select-Object -ExpandProperty 'BaseName') -join ', ' | Write-ActionLog 'Manifests'
 
     # Do not run checks on removed files
     $files = Get-AllChangedFilesInPR $GH_EVENT.number -Filter
-    Write-Log 'PR Changed Files' $files
+    Write-ActionLog 'PR Changed Files' $files
     $files = $files | Where-Object -Property 'filename' -Like -Value 'bucket/*'
-    Write-Log 'Only Changed Manifests' $files
+    Write-ActionLog 'Only Changed Manifests' $files
 
     # Stage 2 - Manifests validation
     $check, $invalid = Test-PRFile $files
 
     #region Stage 3 - Final Message
-    Write-Log 'Checked manifests' $check.name
-    Write-Log 'Invalids' $invalid
+    Write-ActionLog 'Checked manifests' $check.name
+    Write-ActionLog 'Invalids' $invalid
 
     if (($check.Count -eq 0) -and ($invalid.Count -eq 0)) {
-        Write-Log 'No compatible files in PR'
+        Write-ActionLog 'No compatible files in PR'
         return
     }
 
@@ -355,7 +355,7 @@ function Initialize-PR {
     New-FinalMessage $check $invalid
     #endregion Stage 3 - Final Message
 
-    Write-Log 'PR finished'
+    Write-ActionLog 'PR finished'
 }
 
 Export-ModuleMember -Function Initialize-PR

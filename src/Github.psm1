@@ -31,11 +31,11 @@ function Invoke-GithubRequest {
             'Uri'     = "$baseUrl/$Query"
         }
 
-        Write-Log 'Github Request' $parameters
+        Write-ActionLog 'Github Request' $parameters
 
         if ($Body) { $parameters.Add('Body', (ConvertTo-Json $Body -Depth 8 -Compress)) }
 
-        Write-Log 'Request Body' $parameters.Body
+        Write-ActionLog 'Request Body' $parameters.Body
 
         $env:GH_REQUEST_COUNTER = ([int] $env:GH_REQUEST_COUNTER) + 1
 

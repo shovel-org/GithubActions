@@ -12,15 +12,15 @@ Test-NestedBucket
 Initialize-NeededConfiguration
 
 git config --get 'user.email'
-Write-Log 'Importing all modules'
+Write-ActionLog 'Importing all modules'
 # Load all scoop's modules.
 # Dot sourcing needs to be done on highest scope possible to propagate into lower scopes
 Get-ChildItem (Join-Path $env:SCOOP_HOME 'lib') '*.ps1' | ForEach-Object { . $_.FullName }
 
-Write-Log 'FULL EVENT' $EVENT_RAW
+Write-ActionLog 'FULL EVENT' $EVENT_RAW
 
 Invoke-Action
 
-Write-Log 'Number of Github Requests' $env:GH_REQUEST_COUNTER
+Write-ActionLog 'Number of Github Requests' $env:GH_REQUEST_COUNTER
 
 if ($env:NON_ZERO_EXIT) { exit $NON_ZERO }
