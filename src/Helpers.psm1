@@ -302,5 +302,5 @@ function Resolve-IssueTitle {
 }
 
 Export-ModuleMember -Function Write-Log, Get-EnvironmentVariables, New-Array, Add-IntoArray, Initialize-NeededConfiguration, `
-    Expand-Property, Get-Manifest, New-DetailsCommentString, New-CheckListItem, Test-NestedBucket, Resolve-IssueTitle, `
-    New-CheckList
+    Expand-Property, Get-Manifest, Get-ManifestSpecificVersion, New-DetailsCommentString, New-CheckListItem, Test-NestedBucket, `
+    Resolve-IssueTitle, New-CheckList

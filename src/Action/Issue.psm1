@@ -190,9 +190,10 @@ function Initialize-Issue {
         )
 
         try {
-            Write-Log 'Looking for archived version'
+            Write-Log "Looking for archived version ($problematicName $problematicVersion)"
             $gciArchived, $manifestArchived = Get-ManifestSpecificVersion $problematicName $problematicVersion
         } catch {
+            Write-Log 'Cannot find archived version: ' $_.Exception.Message
             $comment = @(
                 "Your reported version ``$problematicVersion`` is not available in this bucket. Make sure you opened the issue in the correct bucket."
                 ''
