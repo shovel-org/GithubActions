@@ -21,6 +21,9 @@ function Install-Scoop {
         shovel config 'SCOOP_BRANCH' $env:SCOOP_BRANCH
         shovel update
     }
+
+    shovel config 'dbgBypassArmCheck' $true
+    shovel config 'aria2-enabled' $false
 }
 
 Export-ModuleMember -Function Install-Scoop
