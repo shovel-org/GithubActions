@@ -147,8 +147,8 @@ function Test-Downloading {
 function Initialize-Issue {
     Write-ActionLog 'Issue initialized' -Success
 
-    if (-not (($GH_EVENT.action -eq 'opened') -or ($GH_EVENT.action -eq 'labeled'))) {
-        Write-ActionLog "Only actions 'opened' and 'labeled' are supported"
+    if ($GH_EVENT.action -notin @('opened', 'labeled')) {
+        Write-ActionLog "Only actions 'opened' and 'labeled' are supported" -Err
         return
     }
 
@@ -205,7 +205,6 @@ function Initialize-Issue {
             Remove-Label -Id $id -Label 'verify'
             return
         }
-
     }
 
     $splat = @{
