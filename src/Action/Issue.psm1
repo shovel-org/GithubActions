@@ -190,6 +190,7 @@ function Initialize-Issue {
         )
 
         try {
+            Write-Log 'Looking for archived version'
             $gciArchived, $manifestArchived = Get-ManifestSpecificVersion $problematicName $problematicVersion
         } catch {
             $comment = @(
