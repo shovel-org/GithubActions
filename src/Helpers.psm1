@@ -150,6 +150,8 @@ function Get-ManifestSpecificVersion {
     # TODO: Consider better approach?
     $manifest = shovel cat $gciItem.Fullname --format json | ConvertFrom-Json
 
+    Write-Log "Found '$($gci.Item.Fullname)' for $Name ($Version)"
+
     return $gciItem, $manifest
 }
 
