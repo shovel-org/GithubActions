@@ -199,12 +199,13 @@ function Initialize-Issue {
                 ''
                 'If you have specific need to have this exact version, please leave a comment on this issue with the said reason.'
             )
+
+            Add-Comment -ID $id -Message $comment
+            Close-Issue -ID $id
+            Remove-Label -Id $id -Label 'verify'
+            return
         }
 
-        Add-Comment -ID $id -Message $comment
-        Close-Issue -ID $id
-        Remove-Label -Id $id -Label 'verify'
-        return
     }
 
     $splat = @{
