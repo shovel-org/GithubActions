@@ -136,6 +136,23 @@ function Get-Manifest {
     return $gciItem, $manifest
 }
 
+function Get-ManifestSpecificVersion {
+    <#
+    .SYNOPSIS
+        Parse manifest and return it's path and object representation.
+    .PARAMETER Name
+        Name of manifest to parse.
+    #>
+    param([Parameter(Mandatory)][String] $Name, $Version)
+
+    # It should alwyas be one item. Just in case use -First
+    $gciItem = Join-Path $MANIFESTS_LOCATION "old\$Name" | Get-ChildItem -Filter "$Version.*" -File | Select-Object -First 1
+    # TODO: Consider better approach?
+    $manifest = shovel cat $gciItem.Fullname --format json | ConvertFrom-Json
+
+    return $gciItem, $manifest
+}
+
 function New-DetailsCommentString {
     <#
     .SYNOPSIS

@@ -4,13 +4,12 @@ function Test-Hash {
     param (
         [Parameter(Mandatory)]
         [String] $Manifest,
-        [Int] $IssueID
+        [Int] $IssueID,
+        $Gci,
+        $Object
     )
 
-    $gci, $man = Get-Manifest $Manifest
-    $manifestNameAsInBucket = $gci.BaseName
-
-    $outputH = @(shovel utils 'checkhashes' $gci.FullName --additional-options -Force *>&1)
+    $outputH = @(shovel utils 'checkhashes' $Gci.FullName --additional-options -Force *>&1)
     $ex = $LASTEXITCODE
     Write-Log 'Output' $outputH
 
@@ -21,7 +20,7 @@ function Test-Hash {
             'Cannot reproduce'
             ''
             'Are you sure your scoop is up to date? Clean cache and reinstall'
-            "Please run ``shovel update; shovel cache rm $manifestNameAsInBucket;`` and update/reinstall application"
+            "Please run ``shovel update; shovel cache rm $Manifest;`` and update/reinstall application"
             ''
             'Hash mismatch could be caused by these factors:'
             ''
@@ -39,13 +38,13 @@ function Test-Hash {
     } else {
         Write-Log 'Verified hash failed'
 
-        $masterBranch = (Invoke-GithubRequest "repos/$REPOSITORY").Content | ConvertFrom-Json
-        $masterBranch = $masterBranch.default_branch
+        $repoInfo = (Invoke-GithubRequest "repos/$REPOSITORY").Content | ConvertFrom-Json
+        $masterBranch = $repoInfo.default_branch
         $message = @('You are right. Thank you for reporting.')
         # TODO: Post labels at the end of function
         Add-Label -ID $IssueID -Label 'verified', 'hash-fix-needed'
         $prs = (Invoke-GithubRequest "repos/$REPOSITORY/pulls?state=open&base=$masterBranch&sorting=updated").Content | ConvertFrom-Json
-        $titleToBePosted = "$manifestNameAsInBucket@$($man.version): Fix hash"
+        $titleToBePosted = "$Manifest@$($Object.version): Fix hash"
         $prs = $prs | Where-Object { $_.title -eq $titleToBePosted }
 
         # There is alreay PR for
@@ -64,10 +63,11 @@ function Test-Hash {
             # Update PR description
             Invoke-GithubRequest "repos/$REPOSITORY/pulls/$prID" -Method Patch -Body @{ 'body' = (@("- Closes #$IssueID", $pr.body) -join "`r`n") }
             Add-Label -ID $IssueID -Label 'duplicate'
+            #TODO: Try to post 'Duplicate of #OriginalIssueID'
         } else {
             Write-Log 'PR - Create new branch and post PR'
 
-            $branch = "$manifestNameAsInBucket-hash-fix-$(Get-Random -Maximum 258258258)"
+            $branch = "$Manifest-hash-fix-$(Get-Random -Maximum 258258258)"
 
             Write-Log 'Branch' $branch
 
@@ -76,7 +76,7 @@ function Test-Hash {
 
             Write-Log 'Git Status' @(git status --porcelain)
 
-            git add $gci.FullName
+            git add $Gci.FullName
             git commit -m $titleToBePosted
             git push 'origin' $branch
 
@@ -93,17 +93,16 @@ function Test-Hash {
 }
 
 function Test-Downloading {
-    param([String] $Manifest, [Int] $IssueID)
+    param([String] $Manifest, [Int] $IssueID, $Gci, $Object)
 
-    $null, $object = Get-Manifest $Manifest
-
+    $Gci | Out-Null
     $broken_urls = @()
+    # TODO: Adopt shovel download $Gci.FullName
     # TODO:? Aria2 support
     # dl_with_cache_aria2 $Manifest 'DL' $object (default_architecture) "/" $object.cookies $true
 
-    # exit 0
     foreach ($arch in @('64bit', '32bit', 'arm64')) {
-        $urls = @(url $object $arch)
+        $urls = @(url $Object $arch)
 
         foreach ($url in $urls) {
             # Trim rename (#48)
@@ -111,7 +110,7 @@ function Test-Downloading {
             Write-Log 'url' $url
 
             try {
-                dl_with_cache $Manifest 'DL' $url $null $object.cookies $true
+                dl_with_cache $Manifest 'DL' $url $null $Object.cookies $true
             } catch {
                 $broken_urls += $url
                 continue
@@ -163,6 +162,7 @@ function Initialize-Issue {
         return
     }
 
+    $gci, $manifest_loaded, $gciArchived = $manifestArchived = $null
     $problematicName, $problematicVersion, $problem = Resolve-IssueTitle $title
     if (($null -eq $problematicName) -or
         ($null -eq $problematicVersion) -or
@@ -173,7 +173,7 @@ function Initialize-Issue {
     }
 
     try {
-        $null, $manifest_loaded = Get-Manifest $problematicName
+        $gci, $manifest_loaded = Get-Manifest $problematicName
     } catch {
         Add-Comment -ID $id -Message "The specified manifest ``$problematicName`` does not exist in this bucket. Make sure you opened the issue in the correct bucket."
         Add-Label -Id $id -Label 'invalid'
@@ -183,30 +183,52 @@ function Initialize-Issue {
     }
 
     if ($manifest_loaded.version -ne $problematicVersion) {
-        Add-Comment -ID $id -Message @(
-            # TODO: Try to find specific version of arhived manifest
-            "You reported version ``$problematicVersion``, but the latest available version is ``$($manifest_loaded.version)``."
+        $comment = @(
+            "You reported version ``$problematicVersion``, but the latest available version is ``$($manifest_loaded.version)``. Make sure you opened the issue in the correct bucket."
             ''
             "Run ``scoop update; scoop update $problematicName --force``"
         )
+
+        try {
+            $gciArchived, $manifestArchived = Get-ManifestSpecificVersion $problematicName $problematicVersion
+        } catch {
+            $comment = @(
+                "Your reported version ``$problematicVersion`` is not available in this bucket. Make sure you opened the issue in the correct bucket."
+                ''
+                'If you have specific need to have this exact version, please leave a comment on this issue with the said reason.'
+            )
+        }
+
+        Add-Comment -ID $id -Message $comment
         Close-Issue -ID $id
         Remove-Label -Id $id -Label 'verify'
         return
     }
 
+    $splat = @{
+        'Manifest' = $gci.BaseName
+        'IssueID'  = $id
+        'Gci'      = $gci
+        'Object'   = $manifest_loaded
+    }
+    if ($manifestArchived -and $gciArchived) {
+        $splat.Gci = $gciArchived
+        $splat.Object = $manifestArchived
+    }
+
     switch -Wildcard ($problem) {
         '*hash check*' {
             Write-Log 'Hash check failed'
-            Test-Hash $problematicName $id
+            Test-Hash @splat
         }
         '*extract_dir*' {
             Write-Log 'Extract dir error'
-            # TODO:
-            # Test-ExtractDir $problematicName $id
+            # TODO: Implement
+            # Test-ExtractDir @splat
         }
         '*download*failed*' {
             Write-Log 'Download failed'
-            Test-Downloading $problematicName $id
+            Test-Downloading @splat
         }
         default { Write-Log 'Not supported issue action' }
     }
