@@ -15,8 +15,8 @@ function Test-ExtractDir {
         $urls = @(url $manifest_o $arch)
         $extract_dirs = @(extract_dir $manifest_o $arch)
 
-        Write-Log $urls
-        Write-Log $extract_dirs
+        Write-ActionLog $urls
+        Write-ActionLog $extract_dirs
 
         for ($i = 0; $i -lt $urls.Count; ++$i) {
             $url = $urls[$i]
@@ -24,7 +24,7 @@ function Test-ExtractDir {
             dl_with_cache $Manifest $version $url $null $manifest_o.cookie $true
 
             $cached = cache_path $Manifest $version $url | Resolve-Path | Select-Object -ExpandProperty Path
-            Write-Log "FILEPATH $url, ${arch}: $cached"
+            Write-ActionLog "FILEPATH $url, ${arch}: $cached"
 
             $full_output = @(7z l $cached | awk '{ print $3, $6 }' | grep '^D')
             $output = @(7z l $cached -ir!"$dir" | awk '{ print $3, $6 }' | grep '^D')
@@ -38,27 +38,27 @@ function Test-ExtractDir {
 
             # There are no files and folders like
             if ($files -eq 0 -and (!$folders -or $folders -eq 0)) {
-                Write-Log "No $dir in $url"
+                Write-ActionLog "No $dir in $url"
 
                 $failed = $true
                 $message += New-DetailsCommentString -Summary "Content of $arch $url" -Content $full_output
-                Write-Log "$dir, $arch, $url FAILED"
+                Write-ActionLog "$dir, $arch, $url FAILED"
             } else {
-                Write-Log "Cannot reproduce $arch $url"
+                Write-ActionLog "Cannot reproduce $arch $url"
 
-                Write-Log "$arch ${url}:"
-                Write-Log $full_output
-                Write-Log "$dir, $arch, $url OK"
+                Write-ActionLog "$arch ${url}:"
+                Write-ActionLog $full_output
+                Write-ActionLog "$dir, $arch, $url OK"
             }
         }
     }
 
     if ($failed) {
-        Write-Log 'Failed' $failed
+        Write-ActionLog 'Failed' $failed
         $message = 'You are right. Can reproduce', '', $message
         Add-Label -ID $IssueID -Label 'verified', 'manifest-fix-needed', 'help wanted'
     } else {
-        Write-Log 'Everything all right' $failed
+        Write-ActionLog 'Everything all right' $failed
         $message = @(
             'Cannot reproduce. Are you sure your scoop is updated?'
             "Try to run ``scoop update; scoop uninstall $Manifest; scoop install $Manifest``"

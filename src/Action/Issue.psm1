@@ -11,10 +11,10 @@ function Test-Hash {
 
     $outputH = @(shovel utils 'checkhashes' $Gci.FullName --additional-options -Force *>&1)
     $ex = $LASTEXITCODE
-    Write-Log 'Output' $outputH
+    Write-ActionLog 'Output' $outputH
 
     if (($ex -eq 0) -and ($outputH[-2] -like 'OK') -and ($outputH[-1] -like 'Writing*')) {
-        Write-Log 'Cannot reproduce'
+        Write-ActionLog 'Cannot reproduce' -Err
 
         Add-Comment -ID $IssueID -Message @(
             'Cannot reproduce'
@@ -32,11 +32,11 @@ function Test-Hash {
         Close-Issue -ID $IssueID
     } elseif ($outputH[-1] -notlike 'Writing*') {
         # There is some error
-        Write-Log 'Automatic check of hashes encounter some problems.'
+        Write-ActionLog 'Automatic check of hashes encounter some problems.' -Err
 
         Add-Label -Id $IssueID -Label 'manifest-fix-needed'
     } else {
-        Write-Log 'Verified hash failed'
+        Write-ActionLog 'Verified hash failed' -Success
 
         $repoInfo = (Invoke-GithubRequest "repos/$REPOSITORY").Content | ConvertFrom-Json
         $masterBranch = $repoInfo.default_branch
@@ -49,7 +49,7 @@ function Test-Hash {
 
         # There is alreay PR for
         if ($prs.Count -gt 0) {
-            Write-Log 'PR - Update description'
+            Write-ActionLog 'PR - Update description' -Success
 
             # Only take latest updated
             $pr = $prs | Select-Object -First 1
@@ -59,22 +59,22 @@ function Test-Hash {
             $message += ''
             $message += "There is already pull request which take care of this issue. (#$prID)"
 
-            Write-Log 'PR ID' $prID
+            Write-ActionLog 'PR ID' $prID
             # Update PR description
             Invoke-GithubRequest "repos/$REPOSITORY/pulls/$prID" -Method Patch -Body @{ 'body' = (@("- Closes #$IssueID", $pr.body) -join "`r`n") }
             Add-Label -ID $IssueID -Label 'duplicate'
             #TODO: Try to post 'Duplicate of #OriginalIssueID'
         } else {
-            Write-Log 'PR - Create new branch and post PR'
+            Write-ActionLog 'PR - Create new branch and post PR' -Success
 
             $branch = "$Manifest-hash-fix-$(Get-Random -Maximum 258258258)"
 
-            Write-Log 'Branch' $branch
+            Write-ActionLog 'Branch' $branch
 
             git checkout -B $branch
             # TODO: There is some problem
 
-            Write-Log 'Git Status' @(git status --porcelain)
+            Write-ActionLog 'Git Status' @(git status --porcelain)
 
             git add $Gci.FullName
             git commit -m $titleToBePosted
@@ -107,7 +107,7 @@ function Test-Downloading {
         foreach ($url in $urls) {
             # Trim rename (#48)
             $url = $url -replace '#/.*$', ''
-            Write-Log 'url' $url
+            Write-ActionLog 'url' $url
 
             try {
                 dl_with_cache $Manifest 'DL' $url $null $Object.cookies $true
@@ -119,7 +119,7 @@ function Test-Downloading {
     }
 
     if ($broken_urls.Count -eq 0) {
-        Write-Log 'All OK'
+        Write-ActionLog 'All OK' -Success
 
         $message = @(
             'Cannot reproduce.'
@@ -136,7 +136,7 @@ function Test-Downloading {
         Add-Comment -ID $IssueID -Comment $message
         # TODO: Close??
     } else {
-        Write-Log 'Broken URLS' $broken_urls
+        Write-ActionLog 'Broken URLS' $broken_urls -Warning
 
         $string = ($broken_urls | Select-Object -Unique | ForEach-Object { "- $_" }) -join "`r`n"
         Add-Label -ID $IssueID -Label 'manifest-fix-needed', 'verified', 'help wanted'
@@ -145,10 +145,10 @@ function Test-Downloading {
 }
 
 function Initialize-Issue {
-    Write-Log 'Issue initialized'
+    Write-ActionLog 'Issue initialized' -Success
 
     if (-not (($GH_EVENT.action -eq 'opened') -or ($GH_EVENT.action -eq 'labeled'))) {
-        Write-Log "Only actions 'opened' and 'labeled' are supported"
+        Write-ActionLog "Only actions 'opened' and 'labeled' are supported"
         return
     }
 
@@ -158,7 +158,7 @@ function Initialize-Issue {
 
     # Only labeled action with verify label should continue
     if (($GH_EVENT.action -eq 'labeled') -and ($label -notcontains 'verify')) {
-        Write-Log 'Labeled action contains wrong label'
+        Write-ActionLog 'Labeled action contains wrong label' -Err
         return
     }
 
@@ -168,7 +168,7 @@ function Initialize-Issue {
         ($null -eq $problematicVersion) -or
         ($null -eq $problem)
     ) {
-        Write-Log 'Not compatible issue title'
+        Write-ActionLog 'Not compatible issue title' -Err
         return
     }
 
@@ -190,10 +190,10 @@ function Initialize-Issue {
         )
 
         try {
-            Write-Log "Looking for archived version ($problematicName $problematicVersion)"
+            Write-ActionLog "Looking for archived version ($problematicName $problematicVersion)" -Warning
             $gciArchived, $manifestArchived = Get-ManifestSpecificVersion $problematicName $problematicVersion
         } catch {
-            Write-Log 'Cannot find archived version: ' $_.Exception.Message
+            Write-ActionLog 'Cannot find archived version: ' $_.Exception.Message -Err
             $comment = @(
                 "Your reported version ``$problematicVersion`` is not available in this bucket. Make sure you opened the issue in the correct bucket."
                 ''
@@ -221,23 +221,23 @@ function Initialize-Issue {
 
     switch -Wildcard ($problem) {
         '*hash check*' {
-            Write-Log 'Hash check failed'
+            Write-ActionLog 'Hash check failed' -Success
             Test-Hash @splat
         }
         '*extract_dir*' {
-            Write-Log 'Extract dir error'
+            Write-ActionLog 'Extract dir error' -Success
             # TODO: Implement
             # Test-ExtractDir @splat
         }
         '*download*failed*' {
-            Write-Log 'Download failed'
+            Write-ActionLog 'Download failed' -Success
             Test-Downloading @splat
         }
-        default { Write-Log 'Not supported issue action' }
+        default { Write-ActionLog 'Not supported issue action' -Err }
     }
 
     Remove-Label -ID $id -Label 'verify'
-    Write-Log 'Issue finished'
+    Write-ActionLog 'Issue finished'
 }
 
 Export-ModuleMember -Function Initialize-Issue

@@ -11,7 +11,7 @@ function Invoke-Action {
         'issue_comment' { Initialize-PR }
         'schedule' { Initialize-Scheduled }
         'issues' { Initialize-Issue }
-        default { Write-Log 'Not supported event type' }
+        default { Write-ActionLog 'Not supported event type' -Err }
     }
 }
 
