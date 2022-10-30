@@ -1,10 +1,11 @@
 name: Shovel Bucket Minion
 description: Set of actions to automate Shovel bucket maintaining.
 author: Jakub <Ash258> Čábera
-# TODO: Wait for proper powershell support
 runs:
-    using: node12
-    main: _init/index.js
+    using: composite
+    steps:
+      - run: ${{ github.action_path }}/action.ps1
+        shell: pwsh
 branding:
     icon: package
     color: purple
