@@ -317,6 +317,17 @@ function Resolve-IssueTitle {
     }
 }
 
+function Get-ArchitectureSpecificProperty {
+    param($Property, $Manifest, $Architecture)
+    
+    if ($Manifest.architecture) {
+        $val = $Manifest.architecture.$Architecture.$Property
+        if ($val) { return $val } # else fallback to generic prop
+    }
+
+    if ($Manifest.$Property) { return $Manifest.$Property }
+}
+
 Export-ModuleMember -Function Write-ActionLog, Get-EnvironmentVariables, New-Array, Add-IntoArray, Initialize-NeededConfiguration, `
     Expand-Property, Get-Manifest, Get-ManifestSpecificVersion, New-DetailsCommentString, New-CheckListItem, Test-NestedBucket, `
-    Resolve-IssueTitle, New-CheckList
+    Resolve-IssueTitle, New-CheckList, Get-ArchitectureSpecificProperty
