@@ -59,6 +59,8 @@ function New-Array {
     .SYNOPSIS
         Create new Array list. More suitable for usage as it provides better operations.
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions')]
+    param()
 
     return New-Object System.Collections.ArrayList
 }
@@ -181,6 +183,7 @@ function New-DetailsCommentString {
         Type of code fenced block (json, yml, ...).
         Needs to be valid markdown code fenced block type.
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions')]
     param([Parameter(Mandatory)][String] $Summary, [String[]] $Content, [String] $Type = 'text')
 
     return @"
@@ -207,6 +210,7 @@ function New-CheckListItem {
     .PARAMETER Simple
         Simple list item will be used instead of check list.
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions')]
     param ([Parameter(Mandatory)][String] $Item, [Int] $IndentLevel = 0, [Switch] $OK, [Switch] $Simple)
 
     $ind = ' ' * 4 * $IndentLevel
@@ -223,16 +227,17 @@ function New-CheckList {
     .PARAMETER Status
         Hashtable/PSCustomObject with name of check as key and boolean (or other pscustomobject) as value.
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions')]
     param($Status)
 
     [PSCustomObject] $result = @() # Array of objects
     $final = @() # Final array of evaluated check lists
 
-    function _res ($name, $indentation, $state) {
+    function _res ($Name, $Indentation, $State) {
         return [PsCustomObject] [Ordered] @{
-            'Item'   = $name
-            'Indent' = $indentation
-            'State'  = $state
+            'Item'   = $Name
+            'Indent' = $Indentation
+            'State'  = $State
         }
     }
 
@@ -242,13 +247,13 @@ function New-CheckList {
         $parentState = $true
 
         if ($item -is [boolean]) {
-            $result += _res $name $ind $item
+            $result += _res -Name $name -Indentation $ind -State $item
         } else {
-            $result += _res $name $ind $null
+            $result += _res -Name $name -Indentation $ind -State $null
             foreach ($k in $item.Keys) {
                 $nestedState = $item.Item($k)
                 if ($nestedState -eq $false) { $parentState = $false }
-                $result += _res $k ($ind + 1) $nestedState
+                $result += _res -Name $k -Indentation ($ind + 1) -State $nestedState
             }
             ($result | Where-Object { ($_.Item -eq $name) -and ($null -eq $_.State) }).State = $parentState
         }
@@ -318,8 +323,12 @@ function Resolve-IssueTitle {
 }
 
 function Get-ArchitectureSpecificProperty {
+    <#
+    .SYNOPSIS
+        Get property of manifest based on architecture.
+    #>
     param($Property, $Manifest, $Architecture)
-    
+
     if ($Manifest.architecture) {
         $val = $Manifest.architecture.$Architecture.$Property
         if ($val) { return $val } # else fallback to generic prop

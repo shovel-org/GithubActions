@@ -108,6 +108,7 @@ function New-Issue {
         List of user logins to be automatically assigned.
         Authenticated user needs push access to repository to be able to set assignees.
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions')]
     param(
         [Parameter(Mandatory)]
         [String] $Title,
@@ -176,6 +177,7 @@ function Remove-Label {
     .PARAMETER Label
         Label to be removed.
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions')]
     param(
         [Parameter(Mandatory, ValueFromPipeline)]
         [Int] $ID,
