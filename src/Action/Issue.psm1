@@ -102,7 +102,7 @@ function Test-Downloading {
     # dl_with_cache_aria2 $Manifest 'DL' $object (default_architecture) "/" $object.cookies $true
 
     foreach ($arch in @('64bit', '32bit', 'arm64')) {
-        $urls = @(url $Object $arch)
+        $urls = @(Get-ArchitectureSpecificProperty 'url' $Object $arch)
 
         foreach ($url in $urls) {
             # Trim rename (#48)
