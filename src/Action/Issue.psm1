@@ -93,27 +93,32 @@ function Test-Hash {
 }
 
 function Test-Downloading {
-    param([String] $Manifest, [Int] $IssueID, $Gci, $Object)
+    param([String] $Manifest, [Int] $IssueID, $Gci, $Object, [String] $Utility)
 
     $Gci | Out-Null
     $broken_urls = @()
-    # TODO: Adopt shovel download $Gci.FullName
-    # TODO:? Aria2 support
-    # dl_with_cache_aria2 $Manifest 'DL' $object (default_architecture) "/" $object.cookies $true
+    $params = @('download', $Gci.Fullname, '--all-architectures')
+    if ($Utility) { $params += @('--utility', $Utility) }
 
-    foreach ($arch in @('64bit', '32bit', 'arm64')) {
-        $urls = @(Get-ArchitectureSpecificProperty 'url' $Object $arch)
+    shovel @params
+    $failedCount = $LASTEXITCODE
 
-        foreach ($url in $urls) {
-            # Trim rename (#48)
-            $url = $url -replace '#/.*$', ''
-            Write-ActionLog 'url' $url
+    # Try to get the failed URLs
+    if ($failedCount -ge 11) {
+        foreach ($arch in @('64bit', '32bit', 'arm64')) {
+            $urls = @(Get-ArchitectureSpecificProperty 'url' $Object $arch)
 
-            try {
-                dl_with_cache $Manifest 'DL' $url $null $Object.cookies $true
-            } catch {
-                $broken_urls += $url
-                continue
+            foreach ($url in $urls) {
+                # Trim rename (#48)
+                $url = $url -replace '#/.*$', ''
+
+                try {
+                    Invoke-WebRequest -Uri $url -Method 'Head'
+                } catch {
+                    $broken_urls += $url
+                    Write-ActionLog "$url -> $($_.Exception.Message)"
+                    continue
+                }
             }
         }
     }
@@ -230,6 +235,14 @@ function Initialize-Issue {
         }
         '*download*failed*' {
             Write-ActionLog 'Download failed' -Success
+            if ($problem -like '*via*') {
+                $util = $problem -replace '.*via\s+(\w+)\s+.*', '$1'
+                # Only supported utilities
+                if ($util -in @('aria2')) {
+                    $splat.Utility = $util
+                }
+            }
+
             Test-Downloading @splat
         }
         default { Write-ActionLog 'Not supported issue action' -Err }
