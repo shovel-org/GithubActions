@@ -95,16 +95,15 @@ function Test-Hash {
 function Test-Downloading {
     param([String] $Manifest, [Int] $IssueID, $Gci, $Object, [String] $Utility)
 
-    $Gci | Out-Null
     $broken_urls = @()
     $params = @('download', $Gci.Fullname, '--all-architectures')
     if ($Utility) { $params += @('--utility', $Utility) }
 
-    shovel @params
+    $outputSH = @(shovel @params *>&1)
     $failedCount = $LASTEXITCODE
 
     # Try to get the failed URLs
-    if ($failedCount -ge 11) {
+    if ($failedCount -ne 0) {
         foreach ($arch in @('64bit', '32bit', 'arm64')) {
             $urls = @(Get-ArchitectureSpecificProperty 'url' $Object $arch)
 
@@ -123,7 +122,7 @@ function Test-Downloading {
         }
     }
 
-    if ($broken_urls.Count -eq 0) {
+    if (($broken_urls.Count -eq 0) -and ($failedCount -eq 0)) {
         Write-ActionLog 'All OK' -Success
 
         $message = @(
@@ -143,9 +142,19 @@ function Test-Downloading {
     } else {
         Write-ActionLog 'Broken URLS' $broken_urls -Warning
 
-        $string = ($broken_urls | Select-Object -Unique | ForEach-Object { "- $_" }) -join "`r`n"
+        $comm = @('Thank you for reporting. You are right.')
+        if ($broken_urls.Count -gt 0) {
+            $string = ($broken_urls | Select-Object -Unique | ForEach-Object { "- $_" }) -join "`r`n"
+            $comm += @('', 'Following URLs are not accessible:', '', $string)
+        } else {
+            $code = New-DetailsCommentString -Summary 'Command output' -Content $outputSH
+            $comm += @('', $code)
+        }
+
         Add-Label -ID $IssueID -Label 'manifest-fix-needed', 'verified', 'help wanted'
-        Add-Comment -ID $IssueID -Comment 'Thank you for reporting. You are right.', '', 'Following URLs are not accessible:', '', $string
+        Add-Comment -ID $IssueID -Comment $comm
+
+        # TODO: Check for opened PRs with `^$Gci.Basename@$Manifest.version` or `^$Gci.Basenanem: Update`
     }
 }
 
