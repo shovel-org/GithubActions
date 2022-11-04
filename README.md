@@ -18,6 +18,9 @@ Set of automated actions, which will save time when maintaining bucket, managing
 1. `SPECIAL_SNOWFLAKES`
     - String
     - List of manifest names joined with `,` used as parameter for auto-pr utility.
+1. `GITH_USERNAME`
+    - Default will be `github-actions[bot]`
+    - If specified this username will be used as author of commits
 
 **: `GITH_EMAIL` environment variable is not required since [1.0.1](https://github.com/Ash258/Scoop-GithubActions/releases/tag/1.0.1), but it is recommended.
 If email is not specified, commits will not be pushed using account bounded to the email. This will lead to not adding contributions. ([See as example commit from github action without user's email](https://github.com/phips28/gh-action-bump-version/commit/adda5b22b3c785eb69d328f91dadb49a4c34a82e))

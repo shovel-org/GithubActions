@@ -116,7 +116,7 @@ function Initialize-NeededConfiguration {
 
     @('cache', 'buckets', 'modules', 'persist', 'shims', 'workspace') | ForEach-Object { New-Item (Join-Path $env:SCOOP $_) -Force -ItemType 'Directory' | Out-Null }
 
-    $user = ($env:GITHUB_REPOSITORY -split '/')[0]
+    $user = if ($env:GITH_USERNAME) { $env:GITH_USERNAME } else { 'github-actions[bot]' }
     $email = if ($env:GITH_EMAIL) { $env:GITH_EMAIL } else { $DEFAULT_EMAIL }
     $rem = "https://${env:GITHUB_ACTOR}:$env:GITHUB_TOKEN@github.com/$env:GITHUB_REPOSITORY.git"
 
@@ -125,7 +125,6 @@ function Initialize-NeededConfiguration {
     git remote 'set-url' --push 'origin' $rem
 
     shovel config '7ZIPEXTRACT_USE_EXTERNAL' $true
-    shovel install 'hub' -g
     if (-not $env:HUB_VERBOSE) {
         $env:HUB_VERBOSE = '1'
         [System.Environment]::SetEnvironmentVariable('HUB_VERBOSE', $env:HUB_VERBOSE, 'Machine')
