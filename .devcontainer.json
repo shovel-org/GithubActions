@@ -1,0 +1,27 @@
+{
+    "name": "Shovel GithubActions Dev",
+    "image": "mcr.microsoft.com/vscode/devcontainers/base:ubuntu",
+    "features": {
+        "ghcr.io/devcontainers/features/powershell": {},
+    },
+    "extensions": [
+        "DavidAnson.vscode-markdownlint",
+        "EditorConfig.EditorConfig",
+        "Gruntfuggly.todo-tree",
+        "ms-vscode.powershell-preview",
+        "redhat.vscode-yaml",
+        "yzhang.markdown-all-in-one",
+    ],
+    "settings": {
+        "powershell.scriptAnalysis.enable": true,
+        "powershell.promptToUpdatePowerShell": false,
+        "powershell.powerShellDefaultVersion": "Core",
+        "powershell.powerShellAdditionalExePaths": {
+            "Core": "/usr/local/bin/pwsh",
+        },
+        "yaml.format.enable": true,
+        "yaml.format.bracketSpacing": true,
+        "yaml.completion": true,
+        "yaml.schemaStore.enable": true,
+    },
+}
