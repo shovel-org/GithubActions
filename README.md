@@ -7,8 +7,6 @@ Set of automated actions, which will save time when maintaining bucket, managing
 1. `GITHUB_TOKEN`
     - **REQUIRED**
     - Use `${{ secrets.GITHUB_TOKEN }}`
-1. `GITH_EMAIL`**
-    - String
 1. `SCOOP_BRANCH`
     - String
     - If specified, `shovel config 'SCOOP_BRANCH' $env:SCOOP_BRANCH` will be configured and shovel updated
@@ -18,9 +16,13 @@ Set of automated actions, which will save time when maintaining bucket, managing
 1. `SPECIAL_SNOWFLAKES`
     - String
     - List of manifest names joined with `,` used as parameter for auto-pr utility.
+1. `GITH_EMAIL`**
+    - String
+    - If specified this email will be used as author of commits
 1. `GITH_USERNAME`
     - Default will be `github-actions[bot]`
     - If specified this username will be used as author of commits
+    - Should be combined with GITH_EMAIL
 
 **: `GITH_EMAIL` environment variable is not required since [1.0.1](https://github.com/Ash258/Scoop-GithubActions/releases/tag/1.0.1), but it is recommended.
 If email is not specified, commits will not be pushed using account bounded to the email. This will lead to not adding contributions. ([See as example commit from github action without user's email](https://github.com/phips28/gh-action-bump-version/commit/adda5b22b3c785eb69d328f91dadb49a4c34a82e))
@@ -109,7 +111,6 @@ jobs:
     - name: Excavator
       uses: shovel-org/GithubActions@main
       env:
-        GITH_EMAIL: youremail@mail.com
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         SKIP_UPDATED: '1'
 
@@ -128,7 +129,6 @@ jobs:
       uses: shovel-org/GithubActions@main
       if: github.event.action == 'opened' || (github.event.action == 'labeled' && contains(github.event.issue.labels.*.name, 'verify'))
       env:
-        GITH_EMAIL: youremail@mail.com # Not needed, but recommended
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 #.github\workflows\issue_commented.yml
@@ -146,7 +146,6 @@ jobs:
       uses: shovel-org/GithubActions@main
       if: startsWith(github.event.comment.body, '/verify')
       env:
-        GITH_EMAIL: youremail@mail.com # Not needed, but recommended
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 #.github\workflows\pull_request.yml
@@ -163,6 +162,5 @@ jobs:
     - name: Pull Request Validator
       uses: shovel-org/GithubActions@main
       env:
-        GITH_EMAIL: youremail@mail.com # Not needed, but recommended
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
