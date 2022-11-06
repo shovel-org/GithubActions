@@ -220,7 +220,11 @@ function Test-PRFile {
                 $statuses.Add('Autoupdate', $autoupdate)
 
                 # There is some hash property defined in autoupdate
-                if ((($outputV -like 'Searching hash for*')) -or (hash $object.autoupdate '32bit') -or (hash $object.autoupdate '64bit') -or (hash $object.autoupdate 'arm64')) {
+                if ((($outputV -like 'Searching hash for*')) -or
+                    (Get-ArchitectureSpecificProperty 'hash' $object.autoupdate '32bit') -or
+                    (Get-ArchitectureSpecificProperty 'hash' $object.autoupdate '64bit') -or
+                    (Get-ArchitectureSpecificProperty 'hash' $object.autoupdate 'arm64')
+                ) {
                     $result = $autoupdate
                     if ($result) {
                         # If any result contains any item with 'Could not find hash*' there is hash extraction error.
@@ -233,38 +237,6 @@ function Test-PRFile {
             #endregion Autoupdate
         }
         #endregion 3. Checkver and 4. Autoupdate
-
-        #region 5. Manifest format
-        # Write-ActionLog 'Format'
-        # TODO: implement format check using array compare if possible (or just strings with raws)
-        # TODO: I am not sure if this will handle tabs and everything what could go wrong.
-        #$raw = Get-Content $manifest.Fullname -Raw
-        #$new_raw = $object | ConvertToPrettyJson
-        #$statuses.Add('Format', ($raw -eq $new_raw))
-        # Write-ActionLog 'Format done'
-        #endregion 4. Manifest format
-
-        #region 6. Installation
-        # Write-ActionLog 'Installation'
-        # # Try catch as currently some components are throwing exceptions
-        # try {
-        #     $outputI = @(scoop install $manifest.FullName *>&1)
-        # } catch {
-        #     Write-ActionLog 'Installation failed' # Mainly due to some manifest script problem
-        #     $installation = $false
-        # }
-
-        # if ($outputI) {
-        # }
-
-        # $statuses.Add('Installation', $installation)
-        # Write-ActionLog 'Installation done'
-        #endregion 6. Installation
-
-        #region 7. Uninstallation
-        # Write-ActionLog 'Uninstallation'
-        # Write-ActionLog 'Uninstallation done'
-        #endregion 7. Uninstallation
 
         $check += [Ordered] @{ 'Name' = $manifest.Basename; 'Statuses' = $statuses }
 
