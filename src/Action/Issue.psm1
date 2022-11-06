@@ -96,7 +96,8 @@ function Test-Downloading {
     param([String] $Manifest, [Int] $IssueID, $Gci, $Object, [String] $Utility)
 
     $broken_urls = @()
-    $origParams = $params = @('download', $Gci.Fullname, '--all-architectures')
+    # TODO: Consider keeping the hash check
+    $origParams = $params = @('download', $Gci.Fullname, '--all-architectures', '--skip')
     if ($Utility) { $params += @('--utility', $Utility) }
 
     Write-ActionLog 'Download command parameters' ($params -join ' ')
