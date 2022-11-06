@@ -99,6 +99,8 @@ function Test-Downloading {
     $params = @('download', $Gci.Fullname, '--all-architectures')
     if ($Utility) { $params += @('--utility', $Utility) }
 
+    Write-ActionLog ($params -join ' ')
+
     $outputSH = @(shovel @params *>&1)
     $failedCount = $LASTEXITCODE
 
