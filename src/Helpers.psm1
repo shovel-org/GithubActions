@@ -59,7 +59,6 @@ function New-Array {
     .SYNOPSIS
         Create new Array list. More suitable for usage as it provides better operations.
     #>
-    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions')]
     param()
 
     return New-Object System.Collections.ArrayList
@@ -182,7 +181,6 @@ function New-DetailsCommentString {
         Type of code fenced block (json, yml, ...).
         Needs to be valid markdown code fenced block type.
     #>
-    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions')]
     param([Parameter(Mandatory)][String] $Summary, [String[]] $Content, [String] $Type = 'text')
 
     return @"
@@ -209,7 +207,6 @@ function New-CheckListItem {
     .PARAMETER Simple
         Simple list item will be used instead of check list.
     #>
-    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions')]
     param ([Parameter(Mandatory)][String] $Item, [Int] $IndentLevel = 0, [Switch] $OK, [Switch] $Simple)
 
     $ind = ' ' * 4 * $IndentLevel
@@ -226,7 +223,6 @@ function New-CheckList {
     .PARAMETER Status
         Hashtable/PSCustomObject with name of check as key and boolean (or other pscustomobject) as value.
     #>
-    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions')]
     param($Status)
 
     [PSCustomObject] $result = @() # Array of objects
