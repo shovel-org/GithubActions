@@ -162,7 +162,7 @@ function Test-Downloading {
         }
 
         Write-ActionLog 'Download output' ($outputSH -join "`r`n")
-        if ($outputSHvanilla) { Write-ActionLog 'Download output (no utility)' ($outputSH -join "`r`n") }
+        if ($outputSHvanilla) { Write-ActionLog 'Download output (no utility)' ($outputSHvanilla -join "`r`n") }
 
         Add-Label -ID $IssueID -Label 'manifest-fix-needed', 'verified', 'help wanted'
         Add-Comment -ID $IssueID -Comment $comm
