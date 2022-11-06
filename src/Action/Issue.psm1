@@ -96,13 +96,20 @@ function Test-Downloading {
     param([String] $Manifest, [Int] $IssueID, $Gci, $Object, [String] $Utility)
 
     $broken_urls = @()
-    $params = @('download', $Gci.Fullname, '--all-architectures')
+    $origParams = $params = @('download', $Gci.Fullname, '--all-architectures')
     if ($Utility) { $params += @('--utility', $Utility) }
 
-    Write-ActionLog ($params -join ' ')
+    Write-ActionLog 'Download command parameters' ($params -join ' ')
 
+    $outputSHvanilla = @()
     $outputSH = @(shovel @params *>&1)
     $failedCount = $LASTEXITCODE
+
+    # Download it using native utility
+    if (($failedCount -ne 0) -and $Utility) {
+        $outputSHvanilla = @(shovel @origParams *>&1)
+        $failedCount = $LASTEXITCODE
+    }
 
     # Try to get the failed URLs
     if ($failedCount -ne 0) {
@@ -152,6 +159,9 @@ function Test-Downloading {
             $code = New-DetailsCommentString -Summary 'Command output' -Content $outputSH
             $comm += @('', $code)
         }
+
+        Write-ActionLog 'Download output' ($outputSH -join "`r`n")
+        if ($outputSHvanilla) { Write-ActionLog 'Download output (no utility)' ($outputSH -join "`r`n") }
 
         Add-Label -ID $IssueID -Label 'manifest-fix-needed', 'verified', 'help wanted'
         Add-Comment -ID $IssueID -Comment $comm
