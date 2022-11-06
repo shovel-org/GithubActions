@@ -10,12 +10,7 @@ Install-Scoop
 Test-NestedBucket
 Initialize-NeededConfiguration
 
-git config --get 'user.email'
-Write-ActionLog 'Importing all modules'
-# Load all scoop's modules.
-# Dot sourcing needs to be done on highest scope possible to propagate into lower scopes
-Get-ChildItem (Join-Path $env:SCOOP_HOME 'lib') '*.ps1' | ForEach-Object { . $_.FullName }
-
+Write-ActionLog 'Git email' (git config --get 'user.email')
 Write-ActionLog 'FULL EVENT' $EVENT_RAW
 
 Invoke-Action
