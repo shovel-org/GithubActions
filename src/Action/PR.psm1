@@ -196,8 +196,13 @@ function Test-PRFile {
             Write-ActionLog 'Output' $outputV
 
             # If there are more than 2 lines and second line is not version, there is problem
-            $checkver = (($ec -eq 0) -and (($outputV.Count -ge 2) -and ($outputV[1].ToString().Trim() -eq "$($object.version)")))
+            $exitStatus = $ec -eq 0
+            $outCount = $outputV.Count -ge 2
+            $versionMatch = $outputV[1].ToString().Trim() -eq "$($object.version)"
+            $checkver = ($exitStatus -and ($outCount -and $versionMatch))
             $statuses.Add('Checkver', $checkver)
+
+            Write-ActionLog 'Checkver result' "ExitCode ($exitStatus [$ec]) Count ($outCount [$($outputV.Count)]) Version match ($versionMatch [$($outputV[1].ToString().Trim())])"
             Write-ActionLog 'Checkver done'
 
             #region Autoupdate
