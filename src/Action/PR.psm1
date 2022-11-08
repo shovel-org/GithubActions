@@ -196,7 +196,7 @@ function Test-PRFile {
             Write-ActionLog 'Output' $outputV
 
             # If there are more than 2 lines and second line is not version, there is problem
-            $checkver = (($ec -eq 0) -and (($outputV.Count -ge 2) -and ($outputV[1] -like "$($object.version)")))
+            $checkver = (($ec -eq 0) -and (($outputV.Count -ge 2) -and ($outputV[1].ToString().Trim() -eq "$($object.version)")))
             $statuses.Add('Checkver', $checkver)
             Write-ActionLog 'Checkver done'
 
