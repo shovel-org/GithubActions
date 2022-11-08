@@ -191,7 +191,7 @@ function Test-PRFile {
         #region 3. Checkver and 4. Autoupdate
         if ($object.checkver) {
             Write-ActionLog 'Checkver'
-            $outputV = @(& shovel utils checkver $manifest.FullName --additional-options -Force *>&1)
+            $outputV = @(& shovel utils checkver $manifest.FullName --additional-options -Force 2>&1 3>&1 5>&1 6>&1)
             $ec = $LASTEXITCODE
             Write-ActionLog 'Output' $outputV
 
